@@ -1,5 +1,15 @@
 # grunt-reduce
 
+---
+NOTE: This fork includes an option to prevent grunt-reduce from mangling template tags (particularly Mustache partials {{>partial}})
+
+This option can be turned on with eg: {fixTemplateTags: '{{ }}'}
+
+Angle brackets within the tag are escaped prior to starting AssetGraph then replaced after in the source and build)
+
+This option is not compatible with cdnRoot or cdnOutRoot
+---
+
 A grunt kitchen that reduces your web ingredients down to their essence for optimal serving. Bon appétit!
 
 grunt-reduce builds your web application based on the DOM.
@@ -76,6 +86,10 @@ module.exports = function( grunt ) {
         // There will be an old IE fallback to the original image
         // 0 disables.
         inlineSize: 4096 // Default: 4096
+
+        // Prevent manging of template tags (particularly Mustache
+        // partials eg: {{>partial}} )
+        fixTemplateTags: "{{ }}" // Default: false
     }
   });
 

@@ -29,11 +29,88 @@ module.exports = function (grunt) {
             '**/.htaccess',
             '*.txt',
             '*.ico'
-        ]
+        ];
 
         if (config.include) {
             loadAssets = loadAssets.concat(config.include);
         }
+
+        /*
+            Hack to prevent AssetGraph from mangling template tags (particularly Mustache partials {{>partial}})
+            Can be turned on with eg: {fixTemplateTags: '{{ }}'}
+
+            Angle brackets within the tag are escaped prior to starting AssetGraph then replaced after in the source and build
+        */
+        var returnTemplateTags = function () {
+            done();
+        };
+
+        if (config.fixTemplateTags) {
+            if (typeof config.fixTemplateTags !== 'string' ||
+                config.fixTemplateTags.indexOf(' ') <= 0 ||
+                config.fixTemplateTags.indexOf(' ') === config.fixTemplateTags.length - 1) {
+                throw new Error('fixTemplateTags option must be a string of the tag delimiters eg: \'{{ }}\'');
+            }
+
+            if (config.cdnRoot || config.cdnOutRoot) {
+                throw new Error('The fixTemplateTags option is not compatible with cdnRoot or cdnOutRoot');
+            }
+
+            var templatePaths = [];
+            var path = require('path');
+            var root = config.root || 'app';
+            var outRootRelative = config.outRoot || 'dist';
+            var tags = config.fixTemplateTags.split(' ');
+            var open = tags[0].trim();
+            var close = tags[1].trim();
+            var stripRe = new RegExp(open + '.*?' + close, 'g');
+            var returnRe = new RegExp('#!#(.*?)\\/#!#', 'g');
+            var stripHTML = function (str) {
+                str = str.replace(/\>/g, '&gt;');
+                str = str.replace(/</g, '&lt;');
+                str = '#!#' + str + '/#!#';
+
+                return str;
+            };
+            var returnHTML = function (str) {
+                str = str.replace(/&gt;/g, '>');
+                return str.replace(/&lt;/g, '<');
+            };
+
+            var templateFiles = [];
+            loadAssets.forEach(function (pattern) {
+                templateFiles = templateFiles.concat(grunt.file.glob.sync(pattern, {
+                    cwd: root
+                }));
+            });
+
+            templateFiles.forEach(function (file) {
+                var src = grunt.file.read(path.join(root, file));
+
+                src = src.replace(stripRe, function (match) {
+                    return stripHTML(match);
+                });
+                grunt.file.write(path.join(root, file), src);
+            });
+
+            returnTemplateTags = function () {
+                var writeTags = function (file) {
+                    var src = grunt.file.read(file);
+
+                    src = src.replace(returnRe, function (match, p1) {
+                        return returnHTML(p1);
+                    });
+                    grunt.file.write(file, src);
+                };
+                templateFiles.forEach(function (file) {
+                    writeTags(path.join(root, file));
+                    writeTags(path.join(outRootRelative, file));
+                });
+
+                done();
+            };
+        }
+
 
         new AssetGraph({ root: rootUrl })
             .on('afterTransform', function (transform, elapsedTime) {
@@ -67,6 +144,6 @@ module.exports = function (grunt) {
                 .writeAssetsToDisc({url: query.createPrefixMatcher(cdnRoot)}, cdnOutRoot || outRoot, cdnRoot)
             .endif()
             .writeStatsToStderr()
-            .run(done);
+            .run(returnTemplateTags);
     });
 };

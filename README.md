@@ -3,11 +3,10 @@
 ---
 NOTE: This fork includes an option to prevent grunt-reduce from mangling template tags (particularly Mustache partials {{>partial}})
 
-This option can be turned on with eg: {fixTemplateTags: '{{ }}'}
+* This option can be turned on with eg: {fixTemplateTags: '{{ }}'}
+* Angle brackets within the tag are escaped prior to starting AssetGraph then replaced after in the source and build)
+* This option is not compatible with cdnRoot or cdnOutRoot
 
-Angle brackets within the tag are escaped prior to starting AssetGraph then replaced after in the source and build)
-
-This option is not compatible with cdnRoot or cdnOutRoot
 ---
 
 A grunt kitchen that reduces your web ingredients down to their essence for optimal serving. Bon appétit!
